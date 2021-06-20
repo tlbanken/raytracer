@@ -178,7 +178,7 @@ Color trace(const Ray *ray, int depth)
         sumcol.r += c.r; sumcol.g += c.g; sumcol.b += c.b;
     }
 
-    // TODO if object is reflective, send out more rays!
+    // if object is reflective, send out more rays!
     float r = objhit->reflectivity;
     if (r > 0.0) {
         // build reflected ray
