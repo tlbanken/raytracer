@@ -9,7 +9,8 @@ CFLAGS += -Wall -Wextra
 #CFLAGS += -g # debug
 CFLAGS += -O3 # Release
 
-LFLAGS = -lm
+# no linker flags
+LFLAGS =
 
 all: $(TARGET)
 

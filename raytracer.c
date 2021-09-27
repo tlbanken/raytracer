@@ -12,6 +12,7 @@
 #include <math.h>
 #include <assert.h>
 #include <getopt.h>
+#include <string.h>
 
 
 #include "geometry.h"
@@ -22,11 +23,12 @@ float radians(float deg);
 
 static void render(Color *vbuf, size_t buf_size);
 static void computePrimRay(float x, float y, const Camera *cam, Ray *ray);
-Color trace(const Ray *ray, int depth);
+static Color trace(const Ray *ray, int depth);
 static void writePPM(Color *vbuf, size_t vbsize, FILE *fout);
 static Color computeLight(const Light *light, const Sphere *obj, const Ray *ray,
         const IntersectInfo *info);
-void printHelp();
+static void printHelp();
+static void updateProgress(float percentage);
 
 int main(int argc, char **argv)
 {
@@ -70,11 +72,10 @@ int main(int argc, char **argv)
  */
 static void render(Color *vbuf, size_t buf_size)
 {
+    fprintf(stderr, "Rendering scene with %zu Objects and %zu Lights:\n", g.num_objs, g.num_lights);
     for (size_t y = 0; y < g.img_h; y++) {
         // print out the percentage complete in scanlines
-        fprintf(stderr, "[%4.2f%%] Scanline %lu/%lu (Objs: %ld, Lights: %ld)\n", 
-                ((float)y / (float)g.img_h) * 100.0, y, g.img_h, g.num_objs,
-                g.num_lights);
+        updateProgress((float)y / (float)g.img_h);
         for (size_t x = 0; x < g.img_w; x++) {
             // generate a primitive ray passing through middle of pixel
             Ray prim_ray;
@@ -89,8 +90,8 @@ static void render(Color *vbuf, size_t buf_size)
             vbuf[index] = col;
         }
     }
-    fprintf(stderr, "[100.00%%] Scanline %lu/%lu (Objs: %ld, Lights: %ld)\n", 
-            g.img_h, g.img_h, g.num_objs, g.num_lights);
+    updateProgress(1.00);
+    fprintf(stderr, "\n");
 }
 
 /*
@@ -123,7 +124,7 @@ static void computePrimRay(float x, float y, const Camera *cam, Ray *ray)
     ray->origin = cam->eye;
 }
 
-Color trace(const Ray *ray, int depth)
+static Color trace(const Ray *ray, int depth)
 {
     Color col;
     Sphere *objhit = NULL;
@@ -257,7 +258,7 @@ static void writePPM(Color *vbuf, size_t vbsize, FILE *fout)
     fprintf(fout, "\n");
 }
 
-void printHelp()
+static void printHelp()
 {
     fprintf(stderr, "usage: raytracer [OPTIONS]\n");
     fprintf(stderr, "\n");
@@ -270,4 +271,36 @@ void printHelp()
     fprintf(stderr, " -o  --  Randomize the objects within the scene\n");
     fprintf(stderr, " -l  --  Randomize the lighting within the scene\n");
     fprintf(stderr, " -h  --  Print this help message\n");
+}
+
+/*
+ * Print out the current progress of rendering. This uses the
+ * '\b' escape char so that the progress bar will update on
+ * only one line.
+ */
+static void updateProgress(float percentage)
+{
+    const int bar_length = 40;
+    if (percentage > 1.0) {
+        percentage = 1.0;
+    } else if (percentage < 0.0) {
+        percentage = 0.0;
+    }
+
+    const char prefix[] = "Progress: ";
+
+    const int del_size = bar_length + 3 + 2 + 4 + (int)strlen(prefix);
+    for (int i = 0; i < del_size; i++) {
+        fprintf(stderr, "\b");
+    }
+    fprintf(stderr, "%s[", prefix);
+    const int filled = percentage * bar_length;
+    for (int i = 0; i < bar_length; i++) {
+        if (i < filled) {
+            fprintf(stderr, "#");
+        } else {
+            fprintf(stderr, " ");
+        }
+    }
+    fprintf(stderr, "] %4.2f%%", percentage * 100.0);
 }
